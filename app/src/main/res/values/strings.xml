@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Automatic Face Blur BETA</string>
+    <string name="take_picture_error">error while taking picture</string>
+    <string name="error">error</string>
+</resources>

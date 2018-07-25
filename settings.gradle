@@ -1,0 +1,3 @@
+include ':app', ':pluginlibrary'
+
+project(':pluginlibrary').projectDir = new File('./pluginlibrary')
