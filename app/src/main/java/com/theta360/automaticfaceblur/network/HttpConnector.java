@@ -15,6 +15,7 @@
  */
 package com.theta360.automaticfaceblur.network;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -59,9 +60,14 @@ public class HttpConnector {
         ShootResult result = ShootResult.FAIL_DEVICE_BUSY;
 
         // set capture mode to image
-        String errorMessage = setImageCaptureMode();
-        if (errorMessage != null) {
-            listener.onError(errorMessage);
+        String setCaptureModeErrorMessage = setImageCaptureMode();
+        String setExposureDelayErrorMessage = setExposureDelay();
+        if (setCaptureModeErrorMessage != null || setExposureDelayErrorMessage != null) {
+            if (setCaptureModeErrorMessage != null) {
+                listener.onError(setCaptureModeErrorMessage);
+            } else {
+                listener.onError(setExposureDelayErrorMessage);
+            }
             result = ShootResult.FAIL_DEVICE_BUSY;
             return result;
         }
@@ -190,7 +196,6 @@ public class HttpConnector {
             JSONObject parameters = new JSONObject();
             JSONObject options = new JSONObject();
             options.put("captureMode", "image");
-            options.put("exposureDelay", 0);
             parameters.put("options", options);
             input.put("parameters", parameters);
 
@@ -349,6 +354,84 @@ public class HttpConnector {
     }
 
     /**
+     * Set exposure delay
+     *
+     * @return errorMessage
+     */
+    public String setExposureDelay() {
+        HttpURLConnection postConnection = createHttpConnection("POST", "/osc/commands/execute");
+        String responseData;
+        String errorMessage = null;
+        InputStream is = null;
+
+        try {
+//          send HTTP POST
+            JSONObject input = new JSONObject();
+            input.put("name", "camera.setOptions");
+            JSONObject parameters = new JSONObject();
+            JSONObject options = new JSONObject();
+            options.put("exposureDelay", 0);
+            parameters.put("options", options);
+            input.put("parameters", parameters);
+
+            OutputStream os = postConnection.getOutputStream();
+            os.write(input.toString().getBytes());
+            postConnection.connect();
+            os.flush();
+            os.close();
+
+            is = postConnection.getInputStream();
+            responseData = InputStreamToString(is);
+
+            // parse JSON data
+            JSONObject output = new JSONObject(responseData);
+            String status = output.getString("state");
+
+            if (status.equals("error")) {
+                JSONObject errors = output.getJSONObject("error");
+                errorMessage = errors.getString("message");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            errorMessage = e.toString();
+            InputStream es = postConnection.getErrorStream();
+            try {
+                if (es != null) {
+                    String errorData = InputStreamToString(es);
+                    JSONObject output = new JSONObject(errorData);
+                    JSONObject errors = output.getJSONObject("error");
+                    errorMessage = errors.getString("message");
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            } finally {
+                if (es != null) {
+                    try {
+                        es.close();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            errorMessage = e.toString();
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return errorMessage;
+    }
+
+    /**
      * Generate connection destination URL
      *
      * @param path Path
@@ -499,5 +582,80 @@ public class HttpConnector {
         }
 
         return is;
+    }
+
+    public long getRemainingSpaces() {
+        HttpURLConnection postConnection = createHttpConnection("POST", "/osc/commands/execute");
+        JSONObject input = new JSONObject();
+        String responseData;
+        String errorMessage = null;
+        InputStream is = null;
+        long remainingSpace = -1;
+        try {
+            // send HTTP POST
+            input.put("name", "camera.getOptions");
+            JSONObject parameters = new JSONObject();
+            JSONArray optionNames = new JSONArray();
+            optionNames.put("remainingSpace");
+            parameters.put("optionNames", optionNames);
+            input.put("parameters", parameters);
+
+            OutputStream os = postConnection.getOutputStream();
+            os.write(input.toString().getBytes());
+            postConnection.connect();
+            os.flush();
+            os.close();
+
+            is = postConnection.getInputStream();
+            responseData = InputStreamToString(is);
+
+            // parse JSON data
+            JSONObject output = new JSONObject(responseData);
+            remainingSpace = output.getJSONObject("results").getJSONObject("options").getLong("remainingSpace");
+
+            String status = output.getString("state");
+
+            if (status.equals("error")) {
+                JSONObject errors = output.getJSONObject("error");
+                errorMessage = errors.getString("message");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            errorMessage = e.toString();
+            InputStream es = postConnection.getErrorStream();
+            try {
+                if (es != null) {
+                    String errorData = InputStreamToString(es);
+                    JSONObject output = new JSONObject(errorData);
+                    JSONObject errors = output.getJSONObject("error");
+                    errorMessage = errors.getString("message");
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            } finally {
+                if (es != null) {
+                    try {
+                        es.close();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            errorMessage = e.toString();
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return remainingSpace;
     }
 }

@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.text.TextUtils;
 import android.view.KeyEvent;
+
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.theta360.automaticfaceblur.network.WebServer;
 import com.theta360.automaticfaceblur.network.model.commands.CommandsName;
@@ -31,6 +32,7 @@ import com.theta360.automaticfaceblur.network.model.values.Errors;
 import com.theta360.automaticfaceblur.network.model.values.State;
 import com.theta360.automaticfaceblur.network.model.values.Status;
 import com.theta360.automaticfaceblur.task.GetOptionsTask;
+import com.theta360.automaticfaceblur.task.GetRemainingSpaceTask;
 import com.theta360.automaticfaceblur.task.ImageProcessorTask;
 import com.theta360.automaticfaceblur.task.SetOptionsTask;
 import com.theta360.automaticfaceblur.task.ShowLiveViewTask;
@@ -43,9 +45,11 @@ import com.theta360.pluginlibrary.callback.KeyCallback;
 import com.theta360.pluginlibrary.receiver.KeyReceiver;
 import com.theta360.pluginlibrary.values.LedColor;
 import com.theta360.pluginlibrary.values.LedTarget;
+
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import timber.log.Timber;
 
 /**
@@ -102,6 +106,7 @@ public class MainActivity extends PluginActivity {
 
             }
         });
+        new GetRemainingSpaceTask(mGetRemainingSpaceTaskCallback).execute();
     }
 
     /**
@@ -133,7 +138,7 @@ public class MainActivity extends PluginActivity {
             mUpdatePreviewTask = null;
         }
         mWebServer.stop();
-        mCanFinishPlugin = true;
+        setAutoClose(true);
         super.onPause();
     }
 
@@ -143,7 +148,7 @@ public class MainActivity extends PluginActivity {
     TakePictureTask.Callback mTakePictureTaskCallback = new Callback() {
         @Override
         public void onPreExecute() {
-            mCanFinishPlugin = false;
+            setAutoClose(false);
         }
 
         @Override
@@ -173,17 +178,20 @@ public class MainActivity extends PluginActivity {
                     mWebServer.sendError(response, errors, commandsName);
                 }
             }
+            if (errors != null) {
+                notificationError(errors.getMessage());
+            }
         }
 
         @Override
         public void onCompleted() {
-            mCanFinishPlugin = true;
+            setAutoClose(true);
         }
 
         @Override
         public void onTakePictureFailed() {
             notificationError(getResources().getString(R.string.error));
-            mCanFinishPlugin = true;
+            setAutoClose(true);
         }
     };
 
@@ -303,6 +311,25 @@ public class MainActivity extends PluginActivity {
             } else {
                 notificationError(getResources().getString(R.string.error));
             }
+        }
+    };
+
+    private GetRemainingSpaceTask.Callback mGetRemainingSpaceTaskCallback = new GetRemainingSpaceTask.Callback() {
+        @Override
+        public void onStorageFew() {
+            notificationLedShow(LedTarget.LED8);
+        }
+        @Override
+        public void onStorageVeryFew() {
+            notificationLedBlink(LedTarget.LED8, null, 2000);
+        }
+        @Override
+        public void onStorageEnough() {
+            notificationLedHide(LedTarget.LED8);
+        }
+        @Override
+        public void onError() {
+            notificationError("error");
         }
     };
 

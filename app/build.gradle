@@ -7,8 +7,8 @@ android {
         applicationId "com.theta360.automaticfaceblur"
         minSdkVersion Integer.parseInt(project.ANDROID_BUILD_MIN_SDK_VERSION)
         targetSdkVersion Integer.parseInt(project.ANDROID_BUILD_TARGET_SDK_VERSION)
-        versionCode 1
-        versionName "1.0.13"
+        versionCode 4
+        versionName "1.05.00"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
