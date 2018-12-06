@@ -87,7 +87,11 @@ adb install -r app-debug.apk
 13. Press the Mode Button more than 2 seconds to finish this plugin.
 
 # 6. History
-* ver.1.0.13 (2018/07/25): Initial version for github.
+* ver.1.01.00 (2018/07/25): Initial version for github.
+* ver.1.02.00 (2018/08/08): Bug fix.
+* ver.1.03.00 (2018/10/05): Bug fix.
+* ver.1.04.00 (2018/11/05): Check remaining space of Theta.
+* ver.1.05.00 (2018/12/04): Terminate the plug-in when there is no space for Theta to take picture.
 
 ---
 

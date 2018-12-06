@@ -3,8 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/photomosaic.iml" filepath="$PROJECT_DIR$/photomosaic.iml" />
       <module fileurl="file://$PROJECT_DIR$/pluginlibrary/pluginlibrary.iml" filepath="$PROJECT_DIR$/pluginlibrary/pluginlibrary.iml" />
+      <module fileurl="file://$PROJECT_DIR$/theta-automatic-face-blur-plugin.iml" filepath="$PROJECT_DIR$/theta-automatic-face-blur-plugin.iml" />
     </modules>
   </component>
 </project>

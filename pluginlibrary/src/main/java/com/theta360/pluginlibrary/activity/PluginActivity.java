@@ -18,6 +18,7 @@ package com.theta360.pluginlibrary.activity;
 
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -65,9 +66,10 @@ public abstract class PluginActivity extends AppCompatActivity {
     private static final String TARGETS = "targets";
 
     private boolean isCamera = false;
+    private boolean isAutoClose = true;
+    private boolean isClosed = false;
     private KeyCallback mKeyCallback;
     private KeyReceiver mKeyReceiver;
-    public boolean mCanFinishPlugin = true;
     private KeyReceiver.Callback onKeyReceiver = new KeyReceiver.Callback() {
         @Override
         public void onKeyDownCallback(int keyCode, KeyEvent event) {
@@ -76,11 +78,8 @@ public abstract class PluginActivity extends AppCompatActivity {
                 if (mKeyCallback != null) {
                     mKeyCallback.onKeyLongPress(keyCode, event);
                 }
-                if (isCamera) {
-                    notificationCameraOpen();
-                }
-                if (mCanFinishPlugin) {
-                    notificationSuccess();
+                if (isAutoClose) {
+                    close();
                 }
             } else {
                 if (mKeyCallback != null) {
@@ -105,12 +104,12 @@ public abstract class PluginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); // Fix to be portrait
         UncaughtException uncaughtException = new UncaughtException(getApplicationContext(),
                 new Callback() {
                     @Override
                     public void onException(String message) {
                         notificationError(message);
-                        finish();
                     }
                 });
         Thread.setDefaultUncaughtExceptionHandler(uncaughtException);
@@ -129,6 +128,9 @@ public abstract class PluginActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        if (!isClosed) {
+            close();
+        }
         unregisterReceiver(mKeyReceiver);
 
         super.onPause();
@@ -136,6 +138,26 @@ public abstract class PluginActivity extends AppCompatActivity {
 
     public void setKeyCallback(KeyCallback keyCallback) {
         mKeyCallback = keyCallback;
+    }
+
+    /**
+     * Auto close setting
+     *
+     * @param autoClose true : auto close / false : not auto close
+     */
+    public void setAutoClose(boolean autoClose) {
+        isAutoClose = autoClose;
+    }
+
+    /**
+     * End processing
+     */
+    public void close() {
+        isClosed = true;
+        if (isCamera) {
+            notificationCameraOpen();
+        }
+        notificationSuccess();
     }
 
     public void notificationCameraOpen() {
@@ -200,13 +222,13 @@ public abstract class PluginActivity extends AppCompatActivity {
     /**
      * Turn on LED3 with color
      *
-     * @param ledTarget target LED
+     * @param ledColor target LED
      */
     public void notificationLed3Show(@NonNull LedColor ledColor) {
-       Intent intent = new Intent(ACTION_LED_SHOW);
-       intent.putExtra(TARGET, LedTarget.LED3.toString());
-       intent.putExtra(COLOR, ledColor.toString());
-       sendBroadcast(intent);
+        Intent intent = new Intent(ACTION_LED_SHOW);
+        intent.putExtra(TARGET, LedTarget.LED3.toString());
+        intent.putExtra(COLOR, ledColor.toString());
+        sendBroadcast(intent);
     }
 
     /**
@@ -286,7 +308,7 @@ public abstract class PluginActivity extends AppCompatActivity {
         intent.putExtra(PACKAGE_NAME, getPackageName());
         intent.putExtra(EXIT_STATUS, ExitStatus.SUCCESS.toString());
         sendBroadcast(intent);
-        finish();
+        finishAndRemoveTask();
     }
 
     /**
@@ -300,7 +322,7 @@ public abstract class PluginActivity extends AppCompatActivity {
         intent.putExtra(EXIT_STATUS, ExitStatus.FAILURE.toString());
         intent.putExtra(MESSAGE, message);
         sendBroadcast(intent);
-        finish();
+        finishAndRemoveTask();
     }
 
     /**
