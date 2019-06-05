@@ -38,6 +38,7 @@ import timber.log.Timber;
 public class HttpConnector {
     private final static long CHECK_STATUS_PERIOD_MS = 50;
     private final static String IP_ADDRESS = "127.0.0.1:8080";
+    private static final String IMAGE = "image";
 
     private Timer mCheckStatusTimer = null;
     private HttpEventListener mHttpEventListener = null;
@@ -58,19 +59,6 @@ public class HttpConnector {
      */
     public ShootResult takePicture(HttpEventListener listener) {
         ShootResult result = ShootResult.FAIL_DEVICE_BUSY;
-
-        // set capture mode to image
-        String setCaptureModeErrorMessage = setImageCaptureMode();
-        String setExposureDelayErrorMessage = setExposureDelay();
-        if (setCaptureModeErrorMessage != null || setExposureDelayErrorMessage != null) {
-            if (setCaptureModeErrorMessage != null) {
-                listener.onError(setCaptureModeErrorMessage);
-            } else {
-                listener.onError(setExposureDelayErrorMessage);
-            }
-            result = ShootResult.FAIL_DEVICE_BUSY;
-            return result;
-        }
 
         HttpURLConnection postConnection = createHttpConnection("POST", "/osc/commands/execute");
         JSONObject input = new JSONObject();
@@ -186,7 +174,7 @@ public class HttpConnector {
      *
      * @return Error message (null is returned if successful)
      */
-    private String setImageCaptureMode() {
+    public String setCaptureMode(String captureMode) {
         String errorMessage;
 
         try {
@@ -195,7 +183,7 @@ public class HttpConnector {
             input.put("name", "camera.setOptions");
             JSONObject parameters = new JSONObject();
             JSONObject options = new JSONObject();
-            options.put("captureMode", "image");
+            options.put("captureMode", captureMode);
             parameters.put("options", options);
             input.put("parameters", parameters);
 
@@ -358,7 +346,7 @@ public class HttpConnector {
      *
      * @return errorMessage
      */
-    public String setExposureDelay() {
+    public String setExposureDelay(int exposureDelay) {
         HttpURLConnection postConnection = createHttpConnection("POST", "/osc/commands/execute");
         String responseData;
         String errorMessage = null;
@@ -370,7 +358,7 @@ public class HttpConnector {
             input.put("name", "camera.setOptions");
             JSONObject parameters = new JSONObject();
             JSONObject options = new JSONObject();
-            options.put("exposureDelay", 0);
+            options.put("exposureDelay", exposureDelay);
             parameters.put("options", options);
             input.put("parameters", parameters);
 
@@ -534,7 +522,7 @@ public class HttpConnector {
     public InputStream getLivePreview() throws IOException, JSONException {
 
         // set capture mode to image
-        setImageCaptureMode();
+        setCaptureMode(IMAGE);
 
         HttpURLConnection postConnection = createHttpConnection("POST", "/osc/commands/execute");
         JSONObject input = new JSONObject();
@@ -657,5 +645,105 @@ public class HttpConnector {
         }
 
         return remainingSpace;
+    }
+
+    public int getExposureDelay() {
+        String optionName = "exposureDelay";
+        JSONObject options = getOptionsJSON(optionName);
+        int exposureDelay = 0;
+        try {
+            exposureDelay = options.getInt(optionName);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return exposureDelay;
+    }
+
+    public String getCaptureMode() {
+        String optionName = "captureMode";
+        JSONObject options = getOptionsJSON(optionName);
+        String captureMode = null;
+        try {
+            captureMode = options.getString(optionName);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return captureMode;
+    }
+
+    private JSONObject getOptionsJSON(String optionName) {
+        HttpURLConnection postConnection = createHttpConnection("POST", "/osc/commands/execute");
+        JSONObject input = new JSONObject();
+        String responseData;
+        String errorMessage = null;
+        InputStream is = null;
+        JSONObject options = null;
+
+        try {
+            // send HTTP POST
+            input.put("name", "camera.getOptions");
+            JSONObject parameters = new JSONObject();
+            JSONArray optionNames = new JSONArray();
+            optionNames.put(optionName);
+            parameters.put("optionNames", optionNames);
+            input.put("parameters", parameters);
+
+            OutputStream os = postConnection.getOutputStream();
+            os.write(input.toString().getBytes());
+            postConnection.connect();
+            os.flush();
+            os.close();
+
+            is = postConnection.getInputStream();
+            responseData = InputStreamToString(is);
+
+            // parse JSON data
+            JSONObject output = new JSONObject(responseData);
+            options = output.getJSONObject("results").getJSONObject("options");
+
+            String status = output.getString("state");
+
+            if (status.equals("error")) {
+                JSONObject errors = output.getJSONObject("error");
+                errorMessage = errors.getString("message");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            errorMessage = e.toString();
+            InputStream es = postConnection.getErrorStream();
+            try {
+                if (es != null) {
+                    String errorData = InputStreamToString(es);
+                    JSONObject output = new JSONObject(errorData);
+                    JSONObject errors = output.getJSONObject("error");
+                    errorMessage = errors.getString("message");
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            } finally {
+                if (es != null) {
+                    try {
+                        es.close();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            errorMessage = e.toString();
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return options;
     }
 }
