@@ -15,6 +15,7 @@
  */
 package com.theta360.automaticfaceblur;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -31,9 +32,12 @@ import com.theta360.automaticfaceblur.network.model.responses.StatusResponse;
 import com.theta360.automaticfaceblur.network.model.values.Errors;
 import com.theta360.automaticfaceblur.network.model.values.State;
 import com.theta360.automaticfaceblur.network.model.values.Status;
+import com.theta360.automaticfaceblur.task.GetCaptureModeTask;
+import com.theta360.automaticfaceblur.task.GetExposureDelayTask;
 import com.theta360.automaticfaceblur.task.GetOptionsTask;
 import com.theta360.automaticfaceblur.task.GetRemainingSpaceTask;
 import com.theta360.automaticfaceblur.task.ImageProcessorTask;
+import com.theta360.automaticfaceblur.task.SetCaptureModeTask;
 import com.theta360.automaticfaceblur.task.SetOptionsTask;
 import com.theta360.automaticfaceblur.task.ShowLiveViewTask;
 import com.theta360.automaticfaceblur.task.TakePictureTask;
@@ -43,6 +47,7 @@ import com.theta360.automaticfaceblur.view.MJpegInputStream;
 import com.theta360.pluginlibrary.activity.PluginActivity;
 import com.theta360.pluginlibrary.callback.KeyCallback;
 import com.theta360.pluginlibrary.receiver.KeyReceiver;
+import com.theta360.pluginlibrary.values.Display;
 import com.theta360.pluginlibrary.values.LedColor;
 import com.theta360.pluginlibrary.values.LedTarget;
 
@@ -65,6 +70,10 @@ public class MainActivity extends PluginActivity {
     private GetOptionsTask mGetOptionsTask;
     private WebServer mWebServer;
     private UpdatePreviewTask mUpdatePreviewTask;
+    private String mCaptureMode;
+    private int mExposureDelay;
+    private static final String IMAGE = "image";
+    private boolean mIsStarted;
 
     /**
      * Set a KeyCallback when onCreate executes.
@@ -106,7 +115,13 @@ public class MainActivity extends PluginActivity {
 
             }
         });
-        new GetRemainingSpaceTask(mGetRemainingSpaceTaskCallback).execute();
+        if (isZ1()) {
+            notificationOledDisplaySet(Display.BASIC);
+        } else {
+            new GetRemainingSpaceTask(mGetRemainingSpaceTaskCallback).execute();
+        }
+        mIsStarted = true;
+        new GetCaptureModeTask(mGetCaptureModeTaskCallback).execute();
     }
 
     /**
@@ -137,9 +152,12 @@ public class MainActivity extends PluginActivity {
             mUpdatePreviewTask.cancel(false);
             mUpdatePreviewTask = null;
         }
+        setAutoClose(false);
+        new SetCaptureModeTask(mSetCaptureModeTaskCallback, mCaptureMode, mExposureDelay, mIsStarted).execute();
         mWebServer.stop();
         setAutoClose(true);
         super.onPause();
+
     }
 
     /**
@@ -155,7 +173,12 @@ public class MainActivity extends PluginActivity {
         public void onPictureGenerated(String fileUrl) {
             if (!TextUtils.isEmpty(fileUrl)) {
                 notificationAudioOpen();
-                notificationLedBlink(LedTarget.LED4, LedColor.BLUE, 1000);
+                if (isZ1()) {
+                    notificationOledDisplaySet(Display.PLUGIN);
+                    notificationOledTextShow("Processing", "");
+                } else {
+                    notificationLedBlink(LedTarget.LED4, LedColor.BLUE, 1000);
+                }
                 mImageProcessorTask = new ImageProcessorTask(mImageProcessorTaskCallback);
                 mImageProcessorTask.execute(fileUrl);
             } else {
@@ -166,7 +189,7 @@ public class MainActivity extends PluginActivity {
 
         @Override
         public void onSendCommand(AsyncHttpServerResponse response, CommandsRequest commandsRequest,
-                Errors errors) {
+                                  Errors errors) {
             if (mWebServer != null && response != null && commandsRequest != null) {
                 CommandsName commandsName = commandsRequest.getCommandsName();
                 if (errors == null) {
@@ -201,7 +224,7 @@ public class MainActivity extends PluginActivity {
     SetOptionsTask.Callback mSetOptionsTaskCallback = new SetOptionsTask.Callback() {
         @Override
         public void onSendCommand(AsyncHttpServerResponse response, CommandsRequest commandsRequest,
-                Errors errors) {
+                                  Errors errors) {
             if (mWebServer != null && response != null && commandsRequest != null) {
                 CommandsName commandsName = commandsRequest.getCommandsName();
                 if (errors == null) {
@@ -222,8 +245,8 @@ public class MainActivity extends PluginActivity {
     GetOptionsTask.Callback mGetOptionsTaskCallback = new GetOptionsTask.Callback() {
         @Override
         public void onSendCommand(String responseData, AsyncHttpServerResponse response,
-                CommandsRequest commandsRequest,
-                Errors errors) {
+                                  CommandsRequest commandsRequest,
+                                  Errors errors) {
             if (mWebServer != null && response != null && commandsRequest != null) {
                 CommandsName commandsName = commandsRequest.getCommandsName();
                 if (errors == null) {
@@ -242,17 +265,17 @@ public class MainActivity extends PluginActivity {
     ShowLiveViewTask.Callback mShowLiveViewTaskCallback = new ShowLiveViewTask.Callback() {
         @Override
         public void onLivePreview(MJpegInputStream mJpegInputStream,
-                AsyncHttpServerResponse response, CommandsRequest commandsRequest,
-                Errors errors) {
+                                  AsyncHttpServerResponse response, CommandsRequest commandsRequest,
+                                  Errors errors) {
             CommandsName commandsName = CommandsName.START_LIVE_PREVIEW;
             if (errors == null) {
-               if (mUpdatePreviewTask != null) {
-                   mUpdatePreviewTask.cancel(false);
-               }
+                if (mUpdatePreviewTask != null) {
+                    mUpdatePreviewTask.cancel(false);
+                }
 
-               mUpdatePreviewTask = new UpdatePreviewTask(mSendPreviewTaskCallback,
-                       mJpegInputStream);
-               mUpdatePreviewTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                mUpdatePreviewTask = new UpdatePreviewTask(mSendPreviewTaskCallback,
+                        mJpegInputStream);
+                mUpdatePreviewTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 CommandsResponse commandsResponse = new CommandsResponse(commandsName,
                         State.DONE);
                 mWebServer.sendCommandsResponse(response, commandsResponse);
@@ -300,7 +323,11 @@ public class MainActivity extends PluginActivity {
             }
             mImageProcessorTask = null;
             notificationAudioClose();
-            notificationLedShow(LedTarget.LED4);
+            if (isZ1()) {
+                notificationOledDisplaySet(Display.BASIC);
+            } else {
+                notificationLedShow(LedTarget.LED4);
+            }
         }
 
         @Override
@@ -333,6 +360,44 @@ public class MainActivity extends PluginActivity {
         }
     };
 
+    private SetCaptureModeTask.Callback mSetCaptureModeTaskCallback = new SetCaptureModeTask.Callback() {
+        @Override
+        public void onSetExposureDelay() {
+            setAutoClose(true);
+        }
+
+        @Override
+        public void onSetExposureDelayFailed(Errors errors) {
+            if (errors != null) {
+                notificationError(errors.getMessage());
+            }
+        }
+
+        @Override
+        public void onSetCaptureModeFailed(Errors errors) {
+            if (errors != null) {
+                notificationError(errors.getMessage());
+            }
+        }
+    };
+
+    private GetCaptureModeTask.Callback mGetCaptureModeTaskCallback = new GetCaptureModeTask.Callback() {
+        @Override
+        public void onGetCaptureMode(String captureMode) {
+            mCaptureMode = captureMode;
+            new GetExposureDelayTask(mGetExposureDelayTaskCallback).execute();
+        }
+    };
+
+    private GetExposureDelayTask.Callback mGetExposureDelayTaskCallback = new GetExposureDelayTask.Callback() {
+        @Override
+        public void onGetExposureDelay(int exposureDelay) {
+            mExposureDelay = exposureDelay;
+            new SetCaptureModeTask(mSetCaptureModeTaskCallback, IMAGE, 0, mIsStarted).execute();
+            mIsStarted = false;
+        }
+    };
+
     /**
      * WebServer Callback
      */
@@ -340,7 +405,7 @@ public class MainActivity extends PluginActivity {
 
         @Override
         public void commandsRequest(AsyncHttpServerResponse response,
-                CommandsRequest commandsRequest) {
+                                    CommandsRequest commandsRequest) {
             CommandsName commandsName = commandsRequest.getCommandsName();
             Timber.d("commandsName : %s", commandsName.toString());
             switch (commandsName) {

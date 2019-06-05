@@ -29,6 +29,7 @@ import android.support.annotation.NonNull;
 
 import com.theta360.automaticfaceblur.Face;
 import com.theta360.automaticfaceblur.exif.Exif;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -38,6 +39,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import timber.log.Timber;
 
 /**
@@ -45,9 +47,11 @@ import timber.log.Timber;
  */
 public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, String>> {
     //Divide the equirectangular image into similar four parts, the rightmost x coordinate of the leftmost part.
-    private static final int RIGHTMOST_OF_LEFT_IMAGE = 1344;
+    private int mRightmostOfLeftImage;
+    private static final double ONE_QUARTER_OF_EQUI = 0.25;
     //Divide the equirectangular image into similar four, the leftmost x coordinate of the rightmost part.
-    private static final int LEFTMOST_OF_RIGHT_IMAGE = 4032;
+    private int mLeftmostOfRightImage;
+    private static final double THREE_QUARTERS_OF_EQUI = 0.75;
     //Maximum of faces can be detected.
     private static final int MAX_FACE = 256;
     public static final String BLURRED_FILE_KEY = "blurred_file_url";
@@ -165,6 +169,10 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
                 //To make Android API FaceDetector effective, Bitmap.Config.RGB_565 is used.
                 options.inPreferredConfig = Bitmap.Config.RGB_565;
                 mBitmapToDetectFace = BitmapFactory.decodeStream(fileInputStream, null, options);
+                mRightmostOfLeftImage = getRightmostOfLeftImage();
+                Timber.d("mRightmostOfLeftImage %d", mRightmostOfLeftImage);
+                mLeftmostOfRightImage = getLeftmostOfRightImage();
+                Timber.d("mLeftmostOfRightImage %d", mLeftmostOfRightImage);
             }
 
             try (FileInputStream fileInputStream = new FileInputStream(fileUrl)) {
@@ -234,7 +242,7 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
 
             //If start x coordinate of left eye on the right side of the bitmap and blur to draw will exceed the width of bitmap
             //or start x coordinate of right eye will exceed the width of bitmap, adjust coordinate.
-            if ((leftEyeBlurStartX >= LEFTMOST_OF_RIGHT_IMAGE
+            if ((leftEyeBlurStartX >= mLeftmostOfRightImage
                     && leftEyeBlurStartX + width >= mBitmapToDetectFace.getWidth())
                     || rightEyeBlurStartX < 0) {
                 //Remove gap between blur and the edge of bitmap.
@@ -246,14 +254,14 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
 
             //If start x coordinate of right eye on the left side of the bitmap and start x coordinate of left eye on the right side of the bitmap
             //or start x coordinate of right eye will exceed the width of bitmap, adjust coordinate.
-            if (rightEyeBlurStartX < 0 || (rightEyeBlurStartX <= RIGHTMOST_OF_LEFT_IMAGE
-                    && leftEyeBlurStartX >= LEFTMOST_OF_RIGHT_IMAGE)) {
+            if (rightEyeBlurStartX < 0 || (rightEyeBlurStartX <= mRightmostOfLeftImage
+                    && leftEyeBlurStartX >= mLeftmostOfRightImage)) {
                 rightEyeBlurStartX = 0;
             }
 
             //If start x coordinate of right eye on the right side of the bitmap and blur to draw will exceed the width of bitmap,
             //adjust coordinate.
-            if (rightEyeBlurStartX >= LEFTMOST_OF_RIGHT_IMAGE
+            if (rightEyeBlurStartX >= mLeftmostOfRightImage
                     && rightEyeBlurStartX + width >= mBitmapToDetectFace.getWidth()) {
                 //Remove gap between blur and the edge of bitmap.
                 while (width % 32 != 0) {
@@ -307,7 +315,7 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
             FaceDetector faceDetector = new FaceDetector(compositedImage.getWidth(),
                     compositedImage.getHeight(), MAX_FACE);
             int faceIsFound = faceDetector.findFaces(compositedImage, faces);
-            int middleOfCompositeImage = RIGHTMOST_OF_LEFT_IMAGE;
+            int middleOfCompositeImage = mRightmostOfLeftImage;
 
             //Calculate coordinate of left eye and right eye.
             for (int index = 0; index < faceIsFound; index++) {
@@ -342,8 +350,8 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
      *
      * @param blurStartX start X coordinate of the blur
      * @param blurStartY start Y coordinate of the blur
-     * @param width width of the blur
-     * @param height height of the blur
+     * @param width      width of the blur
+     * @param height     height of the blur
      */
     private void blur(int blurStartX, int blurStartY, int width, int height) {
         if (!isCancelled()) {
@@ -387,6 +395,14 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
             }
             canvas.drawBitmap(blurToDraw, blurStartX, blurStartY, paint);
         }
+    }
+
+    private int getRightmostOfLeftImage() {
+        return (int) (mBitmapToDetectFace.getWidth() * ONE_QUARTER_OF_EQUI);
+    }
+
+    private int getLeftmostOfRightImage() {
+        return (int) (mBitmapToDetectFace.getWidth() * THREE_QUARTERS_OF_EQUI);
     }
 
     /**

@@ -1,4 +1,14 @@
 apply plugin: 'com.android.application'
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.cookpad.android.licensetools:license-tools-plugin:1.6.0'
+    }
+}
+apply plugin: 'com.cookpad.android.licensetools'
 
 android {
     compileSdkVersion Integer.parseInt(project.ANDROID_BUILD_SDK_VERSION)
@@ -7,8 +17,8 @@ android {
         applicationId "com.theta360.automaticfaceblur"
         minSdkVersion Integer.parseInt(project.ANDROID_BUILD_MIN_SDK_VERSION)
         targetSdkVersion Integer.parseInt(project.ANDROID_BUILD_TARGET_SDK_VERSION)
-        versionCode 4
-        versionName "1.05.00"
+        versionCode 6
+        versionName "1.6.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
