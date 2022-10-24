@@ -16,11 +16,16 @@
 package com.theta360.automaticfaceblur;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Process;
 import android.text.TextUtils;
 import android.view.KeyEvent;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.theta360.automaticfaceblur.network.WebServer;
@@ -44,18 +49,29 @@ import com.theta360.automaticfaceblur.task.TakePictureTask;
 import com.theta360.automaticfaceblur.task.TakePictureTask.Callback;
 import com.theta360.automaticfaceblur.task.UpdatePreviewTask;
 import com.theta360.automaticfaceblur.view.MJpegInputStream;
+import com.theta360.automaticfaceblur.view.MyProgressDialog;
 import com.theta360.pluginlibrary.activity.PluginActivity;
+import com.theta360.pluginlibrary.activity.ThetaInfo;
 import com.theta360.pluginlibrary.callback.KeyCallback;
 import com.theta360.pluginlibrary.receiver.KeyReceiver;
-import com.theta360.pluginlibrary.values.Display;
+import com.theta360.pluginlibrary.values.OledDisplay;
 import com.theta360.pluginlibrary.values.LedColor;
 import com.theta360.pluginlibrary.values.LedTarget;
+import com.theta360.pluginlibrary.values.TextArea;
+import com.theta360.pluginlibrary.values.ThetaModel;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import timber.log.Timber;
+
+import static com.theta360.pluginlibrary.values.ThetaModel.THETA_X;
+import static com.theta360.pluginlibrary.values.ThetaModel.isZ1Model;
 
 /**
  * MainActivity
@@ -63,6 +79,7 @@ import timber.log.Timber;
 public class MainActivity extends PluginActivity {
     public static final String DCIM = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DCIM).getPath();
+    public static final String ACTION_FINISH_UPDATING ="ACTION_ASYNC_FINISH_UPDATING";
     private TakePictureTask mTakePictureTask;
     private ImageProcessorTask mImageProcessorTask;
     private byte[] mPreviewByteArray;
@@ -74,6 +91,12 @@ public class MainActivity extends PluginActivity {
     private int mExposureDelay;
     private static final String IMAGE = "image";
     private boolean mIsStarted;
+    private boolean mIsChanged;
+    private boolean mIsEnded;
+    private JSONObject mJsonRecord = null;
+    static final String URL = "http://localhost:8888";
+    private WebView webView;
+    private boolean takePictureComplete = false;
 
     /**
      * Set a KeyCallback when onCreate executes.
@@ -84,6 +107,9 @@ public class MainActivity extends PluginActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        getWindow().setStatusBarColor(Color.BLACK);
+
         setKeyCallback(new KeyCallback() {
             /**
              * Receive the shutter key down when it is not during taking picture task or
@@ -93,7 +119,7 @@ public class MainActivity extends PluginActivity {
              */
             @Override
             public void onKeyDown(int keyCode, KeyEvent keyEvent) {
-                if (keyCode == KeyReceiver.KEYCODE_CAMERA) {
+                if (keyCode == KeyReceiver.KEYCODE_CAMERA || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
                     if (mTakePictureTask == null && mImageProcessorTask == null) {
                         if (mUpdatePreviewTask != null) {
                             mUpdatePreviewTask.cancel(false);
@@ -112,16 +138,43 @@ public class MainActivity extends PluginActivity {
 
             @Override
             public void onKeyLongPress(int keyCode, KeyEvent event) {
+                if (keyCode == KeyReceiver.KEYCODE_MEDIA_RECORD || keyCode == KeyReceiver.KEYCODE_FUNCTION) {
+//                    if(isXCameraModel()) {
+                        if (mTakePictureTask != null) {
+                            mTakePictureTask.cancel(true);
+                            mTakePictureTask = null;
+                        }
+                        if (mImageProcessorTask != null) {
+                            mImageProcessorTask.cancel(true);
+                            mImageProcessorTask = null;
+                        }
+                        if (mUpdatePreviewTask != null) {
+                            mUpdatePreviewTask.cancel(false);
+                            mUpdatePreviewTask = null;
+                        }
 
+                        mWebServer.stop();
+
+                        finishTask();
+//                    }
+                }
             }
         });
-        if (isZ1()) {
-            notificationOledDisplaySet(Display.BASIC);
+
+        if (isXCameraModel()) {
+            Intent intent = new Intent("com.theta360.plugin.ACTION_PLUGIN_WEBAPI_CAMERA_OPEN");
+            getBaseContext().sendBroadcast(intent);
         } else {
-            new GetRemainingSpaceTask(mGetRemainingSpaceTaskCallback).execute();
+            if (isZ1Model()) {
+                notificationOledDisplaySet(OledDisplay.DISPLAY_BASIC);
+            }
         }
-        mIsStarted = true;
+        new GetRemainingSpaceTask(mGetRemainingSpaceTaskCallback).execute();
         new GetCaptureModeTask(mGetCaptureModeTaskCallback).execute();
+
+        mIsStarted = true;
+        mIsEnded = false;
+        mJsonRecord = new JSONObject();
     }
 
     /**
@@ -133,6 +186,11 @@ public class MainActivity extends PluginActivity {
         super.onResume();
         controlLedOnCreate();
         mWebServer = new WebServer(getApplicationContext(), null, mWebServerCallback);
+
+        webView = (WebView) findViewById(R.id.webView);
+        webView.setWebViewClient(new WebViewClient()); // WebViewを設定する
+        webView.getSettings().setJavaScriptEnabled(true); // JavaScriptを有効にする
+        webView.loadUrl(URL); // URLを読み込む
     }
 
     /**
@@ -152,12 +210,10 @@ public class MainActivity extends PluginActivity {
             mUpdatePreviewTask.cancel(false);
             mUpdatePreviewTask = null;
         }
-        setAutoClose(false);
-        new SetCaptureModeTask(mSetCaptureModeTaskCallback, mCaptureMode, mExposureDelay, mIsStarted).execute();
-        mWebServer.stop();
-        setAutoClose(true);
-        super.onPause();
 
+        setAutoClose(false);
+
+        super.onPause();
     }
 
     /**
@@ -173,11 +229,19 @@ public class MainActivity extends PluginActivity {
         public void onPictureGenerated(String fileUrl) {
             if (!TextUtils.isEmpty(fileUrl)) {
                 notificationAudioOpen();
-                if (isZ1()) {
-                    notificationOledDisplaySet(Display.PLUGIN);
-                    notificationOledTextShow("Processing", "");
+                if(isXCameraModel()) {
+                    MyProgressDialog pd = MyProgressDialog.newInstance();
+                    pd.show(getFragmentManager(), "Processing");
                 } else {
-                    notificationLedBlink(LedTarget.LED4, LedColor.BLUE, 1000);
+                    if (isZ1Model()) {
+                        notificationOledDisplaySet(OledDisplay.DISPLAY_PLUGIN);
+                        Map<TextArea, String> output = new HashMap<>();
+                        output.put(TextArea.MIDDLE, "Processing");
+                        output.put(TextArea.BOTTOM, "");
+                        notificationOledTextShow(output);
+                    } else {
+                        notificationLedBlink(LedTarget.LED4, LedColor.BLUE, 1000);
+                    }
                 }
                 mImageProcessorTask = new ImageProcessorTask(mImageProcessorTaskCallback);
                 mImageProcessorTask.execute(fileUrl);
@@ -208,7 +272,11 @@ public class MainActivity extends PluginActivity {
 
         @Override
         public void onCompleted() {
-            setAutoClose(true);
+            if(isXCameraModel()) {
+                setAutoClose(false);
+            } else {
+                setAutoClose(true);
+            }
         }
 
         @Override
@@ -323,10 +391,15 @@ public class MainActivity extends PluginActivity {
             }
             mImageProcessorTask = null;
             notificationAudioClose();
-            if (isZ1()) {
-                notificationOledDisplaySet(Display.BASIC);
+            takePictureComplete = true;
+            if(isXCameraModel()) {
+                closeDialog();
             } else {
-                notificationLedShow(LedTarget.LED4);
+                if (isZ1Model()) {
+                    notificationOledDisplaySet(OledDisplay.DISPLAY_BASIC);
+                } else {
+                    notificationLedShow(LedTarget.LED4);
+                }
             }
         }
 
@@ -363,7 +436,11 @@ public class MainActivity extends PluginActivity {
     private SetCaptureModeTask.Callback mSetCaptureModeTaskCallback = new SetCaptureModeTask.Callback() {
         @Override
         public void onSetExposureDelay() {
-            setAutoClose(true);
+            if (isXCameraModel()) {
+                setAutoClose(false);
+            } else {
+                setAutoClose(true);
+            }
         }
 
         @Override
@@ -383,8 +460,25 @@ public class MainActivity extends PluginActivity {
 
     private GetCaptureModeTask.Callback mGetCaptureModeTaskCallback = new GetCaptureModeTask.Callback() {
         @Override
-        public void onGetCaptureMode(String captureMode) {
-            mCaptureMode = captureMode;
+        public void onGetCaptureMode(JSONObject json){
+            try {
+                if(json != null) {
+                    JSONObject result = json.getJSONObject("results");
+                    mCaptureMode = result.getJSONObject("options").getString("captureMode");
+                    if(mCaptureMode.equals("image")) {
+                        mJsonRecord = result;
+                        if(!result.getJSONObject("options").isNull("fileFormat")) {
+                            if(result.getJSONObject("options").getJSONObject("fileFormat").getInt("width") == 11008
+                                    && result.getJSONObject("options").getJSONObject("fileFormat").getInt("height") == 5504) {
+                                mIsChanged = true;
+                            }
+                        }
+                    }
+                }
+            } catch (JSONException jsonException) {
+                mCaptureMode = "image";
+                jsonException.printStackTrace();
+            }
             new GetExposureDelayTask(mGetExposureDelayTaskCallback).execute();
         }
     };
@@ -393,7 +487,7 @@ public class MainActivity extends PluginActivity {
         @Override
         public void onGetExposureDelay(int exposureDelay) {
             mExposureDelay = exposureDelay;
-            new SetCaptureModeTask(mSetCaptureModeTaskCallback, IMAGE, 0, mIsStarted).execute();
+            new SetCaptureModeTask(mSetCaptureModeTaskCallback, IMAGE, 0, null, mIsStarted, mIsChanged, mIsEnded).execute();
             mIsStarted = false;
         }
     };
@@ -455,6 +549,10 @@ public class MainActivity extends PluginActivity {
                 case GET_STATUS:
                     if (mTakePictureTask == null && mImageProcessorTask == null) {
                         mWebServer.sendStatus(response, new StatusResponse(Status.IDLE));
+                        if(takePictureComplete) {
+                            takePictureComplete = false;
+                            new ShowLiveViewTask(mShowLiveViewTaskCallback, response, commandsRequest).execute();
+                        }
                     } else if (mImageProcessorTask == null) {
                         mWebServer.sendStatus(response, new StatusResponse(Status.SHOOTING));
                     } else if (mTakePictureTask == null) {
@@ -480,4 +578,37 @@ public class MainActivity extends PluginActivity {
         notificationLedHide(LedTarget.LED7);
         notificationLedHide(LedTarget.LED8);
     }
+
+    private void closeDialog() {
+        Intent intent = new Intent();
+        intent.setAction(ACTION_FINISH_UPDATING);
+        sendBroadcast(intent);
+    }
+
+    private void finishTask() {
+        mWebServer.stop();
+        
+        if(isXCameraModel()) {
+            if (mCaptureMode.equals(IMAGE)) {
+                new SetCaptureModeTask(mSetCaptureModeTaskCallback, mCaptureMode, mExposureDelay, mJsonRecord, mIsStarted, mIsChanged, true).execute();
+            }
+        }
+
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if(isXCameraModel()) {
+                    Intent intent = new Intent("com.theta360.plugin.ACTION_PLUGIN_WEBAPI_CAMERA_CLOSE");
+                    getBaseContext().sendBroadcast(intent);
+                }
+                Process.killProcess(Process.myPid());
+            }
+        }, 2000);
+    }
+
+    public static Boolean isXCameraModel() {
+        ThetaModel model = ThetaModel.getValue(ThetaInfo.getThetaModelName());
+        return model != THETA_X ? false : true;
+    }
+
 }

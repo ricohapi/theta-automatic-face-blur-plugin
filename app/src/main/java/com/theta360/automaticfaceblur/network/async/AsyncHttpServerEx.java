@@ -463,6 +463,16 @@ public class AsyncHttpServerEx extends AsyncHttpServer {
                 response.getHeaders().set("Content-Length", String.valueOf(pair.first));
                 response.code(200);
                 response.getHeaders().add("Content-Type", getContentType(assetPath + path));
+                if (assetPath.endsWith(".html") || assetPath.endsWith(".htm")) {
+                    response.getHeaders().add("X-XSS-Protection", "1; mode=block");
+                    response.getHeaders().add("X-Frame-Options", "SAMEORIGIN");
+                    response.getHeaders().add("X-Content-Type-Options", "nosniff");
+                } else if(assetPath.endsWith(".js")) {
+                    response.getHeaders().add("X-XSS-Protection", "1; mode=block");
+                    response.getHeaders().add("Content-Security-Policy", "default-src 'self'; script-src 'self';");
+                    response.getHeaders().add("X-Frame-Options", "SAMEORIGIN");
+                    response.getHeaders().add("X-Content-Type-Options", "nosniff");
+                }
                 Util.pump(is, response, new CompletedCallback() {
                     @Override
                     public void onCompleted(Exception ex) {

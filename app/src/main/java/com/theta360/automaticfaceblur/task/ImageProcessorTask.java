@@ -16,6 +16,7 @@
 package com.theta360.automaticfaceblur.task;
 
 import static com.theta360.automaticfaceblur.MainActivity.DCIM;
+import static com.theta360.automaticfaceblur.MainActivity.isXCameraModel;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -56,8 +57,12 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
     private static final int MAX_FACE = 256;
     public static final String BLURRED_FILE_KEY = "blurred_file_url";
     public static final String ORIGINAL_FILE_KEY = "original_file_url";
+    private static final String PATH_STORAGE = "/storage/";
+    private static final String SELF = "self";
+    private static final String EMULATED = "emulated";
     private Bitmap mBitmapToDetectFace;
     private Bitmap mBitmapToBlur;
+
     private Callback mCallback;
 
     /**
@@ -88,6 +93,10 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
         Matcher matcher = Pattern.compile("/\\d{3}RICOH.*").matcher(params[0]);
         if (matcher.find()) {
             String fileUrl = DCIM + matcher.group();
+            if(isXCameraModel()) {
+                //SDカードだった場合、読み込み先を変更する
+                fileUrl = fileUrl.replace(EMULATED + "/0", sdMount());
+            }
             try {
                 long start = System.currentTimeMillis();
                 Bitmap bitmap = blurInputFile(fileUrl);
@@ -395,6 +404,19 @@ public class ImageProcessorTask extends AsyncTask<String, Void, Map<String, Stri
             }
             canvas.drawBitmap(blurToDraw, blurStartX, blurStartY, paint);
         }
+    }
+
+    public String sdMount() {
+        File file = new File(PATH_STORAGE);
+        String[] fileList = file.list();
+        if(fileList.length >= 3) {
+            for (int i = 0; i < fileList.length; i++) {
+                if(!fileList[i].equals(EMULATED) && !fileList[i].equals(SELF)) {
+                    return fileList[i];
+                }
+            }
+        }
+        return EMULATED + "/0";
     }
 
     private int getRightmostOfLeftImage() {

@@ -20,7 +20,10 @@ import android.os.AsyncTask;
 
 import com.theta360.automaticfaceblur.network.HttpConnector;
 
-public class GetCaptureModeTask extends AsyncTask<Void, Void, String> {
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class GetCaptureModeTask extends AsyncTask<Void, Void, JSONObject> {
     private Callback mCallback;
     private HttpConnector mCamera;
 
@@ -35,22 +38,26 @@ public class GetCaptureModeTask extends AsyncTask<Void, Void, String> {
     }
 
     @Override
-    protected String doInBackground(Void... params) {
+    protected JSONObject doInBackground(Void... params) {
         mCamera = new HttpConnector();
         return mCamera.getCaptureMode();
     }
 
     @Override
-    protected void onPostExecute(String captureMode) {
-        mCallback.onGetCaptureMode(captureMode);
+    protected void onPostExecute(JSONObject result) {
+        try {
+            mCallback.onGetCaptureMode(result);
+        } catch (JSONException jsonException) {
+            jsonException.printStackTrace();
+        }
     }
 
     @Override
-    protected void onCancelled(String result) {
+    protected void onCancelled(JSONObject result) {
         mCamera = null;
     }
 
     public interface Callback {
-        void onGetCaptureMode(String captureMode);
+        void onGetCaptureMode(JSONObject result) throws JSONException;
     }
 }
