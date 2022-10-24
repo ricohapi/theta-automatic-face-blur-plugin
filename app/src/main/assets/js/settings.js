@@ -99,7 +99,7 @@ function getOptions(EXPFlag) {
           if (EXPFlag) {
             changeMenu("auto");
           }
-          var htmlvalue = '<p class="btn--data__value">' + options.exposureCompensation + '</p>';
+          var htmlvalue = '<p class="btn--data__value">' + getNumber(options.exposureCompensation.toFixed(1)) + '</p>';
           $("#evlabel1").html(htmlvalue);
           $("#evlabel1").val(options.exposureCompensation);
           var evindex = mEvSupport.indexOf(options.exposureCompensation);
@@ -120,14 +120,13 @@ function getOptions(EXPFlag) {
           if (EXPFlag) {
             changeMenu("shutter");
           }
-          $("#shutter_menu_wrap").html(mShutterSpeedPriorityData);
           var htmlvalue = setSPLabel(options.shutterSpeed);
           $("#splabel1").html(htmlvalue);
           $("#splabel1").val(options.shutterSpeed);
           var spindex = getSPModeIndex(options.shutterSpeed);
           $('input[name=shutterspeed]:eq(' + spindex + ')').prop('checked', true);
 
-          htmlvalue = '<p class="btn--data__value">' + options.exposureCompensation + '</p>';
+          htmlvalue = '<p class="btn--data__value">' + getNumber(options.exposureCompensation.toFixed(1)) + '</p>';
           $("#evlabel2").html(htmlvalue);
           $("#evlabel2").val(options.exposureCompensation);
           var evindex = mEvSupport.indexOf(options.exposureCompensation);
@@ -150,7 +149,7 @@ function getOptions(EXPFlag) {
           var isoindex = mIsoSupport.indexOf(options.iso);
           $('input[name=iso]:eq('+ isoindex +')').prop('checked', true);
 
-          htmlvalue = '<p class="btn--data__value">' + options.exposureCompensation + '</p>';
+          htmlvalue = '<p class="btn--data__value">' + getNumber(options.exposureCompensation.toFixed(1)) + '</p>';
           $("#evlabel3").html(htmlvalue);
           $("#evlabel3").val(options.exposureCompensation);
           var evindex = mEvSupport.indexOf(options.exposureCompensation);

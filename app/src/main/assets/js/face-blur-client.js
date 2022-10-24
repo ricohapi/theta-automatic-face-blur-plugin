@@ -54,79 +54,130 @@ var actionsJp = {
 var mIsoSupport = [64, 80, 100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1000, 1250, 1600, 2000, 2500, 3200];
 
 var mShutterSpeedSupport = [
-	{ val : "0.00004", text : "1/25000" },
-	{ val : "0.00005", text : "1/20000" },
-	{ val : "0.0000625", text : "1/16000" },
-	{ val : "0.00008", text : "1/12500" },
-	{ val : "0.0001", text : "1/10000" },
-	{ val : "0.000125", text : "1/8000" },
-	{ val : "0.00015625", text : "1/6400" },
-	{ val : "0.0002", text : "1/5000" },
-	{ val : "0.00025", text : "1/4000" },
-	{ val : "0.0003125", text : "1/3200" },
-	{ val : "0.0004", text : "1/2500" },
-	{ val : "0.0005", text : "1/2000" },
-	{ val : "0.000625", text : "1/1600" },
-	{ val : "0.0008", text : "1/1250" },
-	{ val : "0.001", text : "1/1000" },
-	{ val : "0.00125", text : "1/800" },
-	{ val : "0.0015625", text : "1/640" },
-	{ val : "0.002", text : "1/500" },
-	{ val : "0.0025", text : "1/400" },
-	{ val : "0.003125", text : "1/320" },
-	{ val : "0.004", text : "1/250" },
-	{ val : "0.005", text : "1/20" },
-	{ val : "0.06666666", text : "1/15" },
-	{ val : "0.07692307", text : "1/13" },
-	{ val : "0.1", text : "1/10" },
-	{ val : "0.125", text : "1/8" },
-	{ val : "0.16666666", text : "1/6" },
-	{ val : "0.2", text : "1/5" },
-	{ val : "0.25", text : "1/4" },
-	{ val : "0.33333333", text : "1/3" },
-	{ val : "0.4", text : "1/2.5" },
-	{ val : "0.5", text : "1/2" },
-	{ val : "0.625", text : "1/1.6" },
-	{ val : "0.76923076", text : "1/1.3" },
-	{ val : "1", text : "1" },
-	{ val : "1.3", text : "1.3" },
-	{ val : "1.6", text : "1.6" },
-	{ val : "2", text : "2" },
-	{ val : "2.5", text : "2.5" },
-	{ val : "3.2", text : "3.2" },
-	{ val : "4", text : "4" },
-	{ val : "5", text : "5" },
-	{ val : "6", text : "6" },
-	{ val : "8", text : "8" },
-	{ val : "10", text : "10" },
-	{ val : "13", text : "13" },
-	{ val : "15", text : "15" },
-	{ val : "20", text : "20" },
-	{ val : "25", text : "25" },
+	{ val : "60", text : "60" },
 	{ val : "30", text : "30" },
-	{ val : "60", text : "60" }
+    { val : "25", text : "25" },
+	{ val : "20", text : "20" },
+	{ val : "15", text : "15" },
+	{ val : "13", text : "13" },
+	{ val : "10", text : "10" },
+	{ val : "8", text : "8" },
+	{ val : "6", text : "6" },
+	{ val : "5", text : "5" },
+	{ val : "4", text : "4" },
+	{ val : "3.2", text : "3.2" },
+	{ val : "2.5", text : "2.5" },
+	{ val : "2", text : "2" },
+	{ val : "1.6", text : "1.6" },
+	{ val : "1.3", text : "1.3" },
+	{ val : "1", text : "1" },
+	{ val : "0.76923076", text : "1/1.3" },
+	{ val : "0.625", text : "1/1.6" },
+	{ val : "0.5", text : "1/2" },
+	{ val : "0.4", text : "1/2.5" },
+	{ val : "0.33333333", text : "1/3" },
+	{ val : "0.25", text : "1/4" },
+	{ val : "0.2", text : "1/5" },
+	{ val : "0.16666666", text : "1/6" },
+	{ val : "0.125", text : "1/8" },
+	{ val : "0.1", text : "1/10" },
+	{ val : "0.07692307", text : "1/13" },
+	{ val : "0.06666666", text : "1/15" },
+	{ val : "0.05", text : "1/20" },
+	{ val : "0.04", text : "1/25" },
+	{ val : "0.03333333", text : "1/30" },
+	{ val : "0.025", text : "1/40" },
+	{ val : "0.02", text : "1/50" },
+	{ val : "0.01666666", text : "1/60" },
+	{ val : "0.0125", text : "1/80" },
+	{ val : "0.01", text : "1/100" },
+	{ val : "0.008", text : "1/125" },
+	{ val : "0.00625", text : "1/160" },
+	{ val : "0.005", text : "1/200" },
+	{ val : "0.004", text : "1/250" },
+	{ val : "0.003125", text : "1/320" },
+	{ val : "0.0025", text : "1/400" },
+	{ val : "0.002", text : "1/500" },
+	{ val : "0.0015625", text : "1/640" },
+	{ val : "0.00125", text : "1/800" },
+	{ val : "0.001", text : "1/1000" },
+	{ val : "0.0008", text : "1/1250" },
+	{ val : "0.000625", text : "1/1600" },
+	{ val : "0.0005", text : "1/2000" },
+	{ val : "0.0004", text : "1/2500" },
+	{ val : "0.0003125", text : "1/3200" },
+	{ val : "0.00025", text : "1/4000" },
+	{ val : "0.0002", text : "1/5000" },
+	{ val : "0.00015625", text : "1/6400" },
+	{ val : "0.000125", text : "1/8000" },
+	{ val : "0.0001", text : "1/10000" },
+    { val : "0.00008", text : "1/12500" },
+	{ val : "0.0000625", text : "1/16000" },
+    { val : "0.00005", text : "1/20000" },
+    { val : "0.00004", text : "1/25000" }
 ];
 
 var mShutterSpeedSupportOnShutterSpeedMode = [
-	{ val : "0.00004", text : "1/25000" },
-	{ val : "0.00005", text : "1/20000" },
-	{ val : "0.0000625", text : "1/16000" },
-	{ val : "0.00008", text : "1/12500" },
-	{ val : "0.0001", text : "1/10000" },
-	{ val : "0.000125", text : "1/8000" },
-	{ val : "0.00015625", text : "1/6400" },
-	{ val : "0.0002", text : "1/5000" },
-	{ val : "0.00025", text : "1/4000" },
-	{ val : "0.0003125", text : "1/3200" },
-	{ val : "0.0004", text : "1/2500" },
-	{ val : "0.0005", text : "1/2000" },
-	{ val : "0.000625", text : "1/1600" },
-	{ val : "0.0008", text : "1/1250" },
+	{ val : "15", text : "15" },
+	{ val : "13", text : "13" },
+	{ val : "10", text : "10" },
+	{ val : "8", text : "8" },
+	{ val : "6", text : "6" },
+	{ val : "5", text : "5" },
+	{ val : "4", text : "4" },
+	{ val : "3.2", text : "3.2" },
+	{ val : "2.5", text : "2.5" },
+	{ val : "2", text : "2" },
+	{ val : "1.6", text : "1.6" },
+	{ val : "1.3", text : "1.3" },
+	{ val : "1", text : "1" },
+	{ val : "0.76923076", text : "1/1.3" },
+	{ val : "0.625", text : "1/1.6" },
+	{ val : "0.5", text : "1/2" },
+	{ val : "0.4", text : "1/2.5" },
+	{ val : "0.33333333", text : "1/3" },
+	{ val : "0.25", text : "1/4" },
+	{ val : "0.2", text : "1/5" },
+	{ val : "0.16666666", text : "1/6" },
+	{ val : "0.125", text : "1/8" },
+	{ val : "0.1", text : "1/10" },
+	{ val : "0.07692307", text : "1/13" },
+	{ val : "0.06666666", text : "1/15" },
+	{ val : "0.05", text : "1/20" },
+	{ val : "0.04", text : "1/25" },
+	{ val : "0.03333333", text : "1/30" },
+	{ val : "0.025", text : "1/40" },
+	{ val : "0.02", text : "1/50" },
+    { val : "0.01666666", text : "1/60" },
+	{ val : "0.0125", text : "1/80" },
+	{ val : "0.01", text : "1/100" },
+	{ val : "0.008", text : "1/125" },
+	{ val : "0.00625", text : "1/160" },
+	{ val : "0.005", text : "1/200" },
+	{ val : "0.004", text : "1/250" },
+	{ val : "0.003125", text : "1/320" },
+	{ val : "0.0025", text : "1/400" },
+	{ val : "0.002", text : "1/500" },
+	{ val : "0.0015625", text : "1/640" },
+	{ val : "0.00125", text : "1/800" },
 	{ val : "0.001", text : "1/1000" },
-	{ val : "0.00125", text : "1/800" }
+	{ val : "0.0008", text : "1/1250" },
+	{ val : "0.000625", text : "1/1600" },
+	{ val : "0.0005", text : "1/2000" },
+	{ val : "0.0004", text : "1/2500" },
+	{ val : "0.0003125", text : "1/3200" },
+	{ val : "0.00025", text : "1/4000" },
+	{ val : "0.0002", text : "1/5000" },
+	{ val : "0.00015625", text : "1/6400" },
+	{ val : "0.000125", text : "1/8000" },
+	{ val : "0.0001", text : "1/10000" },
+	{ val : "0.00008", text : "1/12500" },
+    { val : "0.0000625", text : "1/16000" },
+    { val : "0.00005", text : "1/20000" },
+    { val : "0.00004", text : "1/25000" }
 ];
 
-var mEvSupport = [ -2, -1.7, -1.3, -1, -0.7, -0.3, 0, 0.3, 0.7, 1, 1.3, 1.7, 2];
+var mEvSupport = [ -2.0, -1.7, -1.3, -1.0, -0.7, -0.3, 0, +0.3, +0.7, +1.0, +1.3, +1.7, +2.0];
 
 var mWbSupport = [
 	{ val : "auto", text : "Auto" ,icon: "icon--wb_auto"},
@@ -323,8 +374,8 @@ function initEvMenu(){
 	var setData = "";
 	for (var i = 0; i < mEvSupport.length; i++){
 		setData += "<label class='scroll_btn'>";
-		setData += "	<input name='ev' type='radio' value='" + mEvSupport[i] + "' id='ev" + i + "'>";
-		setData += "	<i for='ev" + i + "'>" + mEvSupport[i] + "</i>";
+		setData += "	<input name='ev' type='radio' value='" + getNumber(mEvSupport[i]) + "' id='ev" + i + "'>";
+		setData += "	<i for='ev" + i + "'>" + getNumber(mEvSupport[i].toFixed(1)) + "</i>";
 		setData += "</label>";		
 	}
 
@@ -346,7 +397,7 @@ function initEvMenu(){
   $("input[name='ev']:eq(5)").prop('checked', true);
 
     $('input[name="ev"]').on('click',function(event) {
-       var htmlvalue = '<p class="btn--data__value">'+ $(event.target).val() +'</p>';
+       var htmlvalue = '<p class="btn--data__value">'+ $(event.target).toFixed(1).val() +'</p>';
         switch($("input[name='action']:checked").val()){
         case "auto":
           $("#evlabel1").html(htmlvalue);
@@ -606,13 +657,14 @@ function setSPLabel(value) {
             break;
           }
         }
-       var htmlvalue = '<p class="btn--data__value">'+ label +'</p>';
+       return '<p class="btn--data__value">' + label +"</p>";
 }
 
 function getSPIndex(value) {
         var index = 0;
       	for (var i = 0; i < mShutterSpeedSupport.length; i++){
           if (mShutterSpeedSupport[i].val == value) {
+            index = i;
             break;
           }
         }
@@ -623,6 +675,7 @@ function getSPModeIndex(value) {
         var index = 0;
       	for (var i = 0; i < mShutterSpeedSupportOnShutterSpeedMode.length; i++){
           if (mShutterSpeedSupportOnShutterSpeedMode[i].val == value) {
+            index = i;
             break;
           }
         }
@@ -907,3 +960,11 @@ function enableShutterButton() {
     $(".btn.btn--shutter-normal").prop("disabled", false);
 }
 
+function getNumber(theNumber)
+{
+    if(theNumber > 0){
+        return "+" + theNumber;
+    }else{
+        return theNumber.toString();
+    }
+}

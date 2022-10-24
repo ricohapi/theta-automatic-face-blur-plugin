@@ -15,6 +15,9 @@
  */
 package com.theta360.automaticfaceblur.network;
 
+import com.theta360.pluginlibrary.activity.ThetaInfo;
+import com.theta360.pluginlibrary.values.ThetaModel;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -174,7 +177,7 @@ public class HttpConnector {
      *
      * @return Error message (null is returned if successful)
      */
-    public String setCaptureMode(String captureMode) {
+    public String setCaptureMode(String captureMode, JSONObject jsonRecord, boolean isEnded, boolean isChanged) {
         String errorMessage;
 
         try {
@@ -183,6 +186,56 @@ public class HttpConnector {
             input.put("name", "camera.setOptions");
             JSONObject parameters = new JSONObject();
             JSONObject options = new JSONObject();
+            JSONObject fileFormat = new JSONObject();
+            if(jsonRecord != null && !jsonRecord.isNull("options")) {
+                String exposureProgram = jsonRecord.getJSONObject("options").getString("exposureProgram");
+                switch (exposureProgram) {
+                    case "2": // AUTO
+                        options.put("exposureProgram", exposureProgram);
+                        options.put("exposureCompensation", jsonRecord.getJSONObject("options").getString("exposureCompensation"));
+                        options.put("whiteBalance", jsonRecord.getJSONObject("options").getString("whiteBalance"));
+                        options.put("_filter", jsonRecord.getJSONObject("options").getString("_filter"));
+                        break;
+                    case "4": // Shutter
+                        options.put("exposureProgram", exposureProgram);
+                        options.put("shutterSpeed", jsonRecord.getJSONObject("options").getString("shutterSpeed"));
+                        options.put("exposureCompensation", jsonRecord.getJSONObject("options").getString("exposureCompensation"));
+                        options.put("whiteBalance", jsonRecord.getJSONObject("options").getString("whiteBalance"));
+                        break;
+                    case "9": // ISO
+                        options.put("exposureProgram", exposureProgram);
+                        options.put("iso", jsonRecord.getJSONObject("options").getString("iso"));
+                        options.put("exposureCompensation", jsonRecord.getJSONObject("options").getString("exposureCompensation"));
+                        options.put("whiteBalance", jsonRecord.getJSONObject("options").getString("whiteBalance"));
+                        break;
+                    case "1": // Manual
+                        options.put("exposureProgram", exposureProgram);
+                        options.put("shutterSpeed", jsonRecord.getJSONObject("options").getString("shutterSpeed"));
+                        options.put("iso", jsonRecord.getJSONObject("options").getString("iso"));
+                        options.put("whiteBalance", jsonRecord.getJSONObject("options").getString("whiteBalance"));
+                        break;
+                    default:
+                }
+            }
+            if(ThetaModel.getValue(ThetaInfo.getThetaModelName()).equals(ThetaModel.THETA_X)) {
+                if(!isEnded) {
+                    if(isChanged) {
+                        // 5.5K
+                        fileFormat.put("type", "jpeg");
+                        fileFormat.put("width", 5504);
+                        fileFormat.put("height", 2752);
+                        options.put("fileFormat", fileFormat);
+                    }
+                } else {
+                    if(isChanged) {
+                        // 11K
+                        fileFormat.put("type", "jpeg");
+                        fileFormat.put("width", 11008);
+                        fileFormat.put("height", 5504);
+                        options.put("fileFormat", fileFormat);
+                    }
+                }
+            }
             options.put("captureMode", captureMode);
             parameters.put("options", options);
             input.put("parameters", parameters);
@@ -521,9 +574,6 @@ public class HttpConnector {
      */
     public InputStream getLivePreview() throws IOException, JSONException {
 
-        // set capture mode to image
-        setCaptureMode(IMAGE);
-
         HttpURLConnection postConnection = createHttpConnection("POST", "/osc/commands/execute");
         JSONObject input = new JSONObject();
         InputStream is;
@@ -659,16 +709,81 @@ public class HttpConnector {
         return exposureDelay;
     }
 
-    public String getCaptureMode() {
-        String optionName = "captureMode";
-        JSONObject options = getOptionsJSON(optionName);
-        String captureMode = null;
+    public JSONObject getCaptureMode() {
+        HttpURLConnection postConnection = createHttpConnection("POST", "/osc/commands/execute");
+        JSONObject input = new JSONObject();
+        String responseData;
+        InputStream is = null;
+        JSONObject output = null;
+
         try {
-            captureMode = options.getString(optionName);
+            // send HTTP POST
+            input.put("name", "camera.getOptions");
+            JSONObject parameters = new JSONObject();
+            JSONArray optionNames = new JSONArray();
+            optionNames.put("captureMode");
+            optionNames.put("exposureProgram");
+            optionNames.put("iso");
+            optionNames.put("shutterSpeed");
+            optionNames.put("whiteBalance");
+            optionNames.put("_colorTemperature");
+            optionNames.put("exposureCompensation");
+            optionNames.put("_filter");
+            optionNames.put("fileFormat");
+            parameters.put("optionNames", optionNames);
+            input.put("parameters", parameters);
+
+            OutputStream os = postConnection.getOutputStream();
+            os.write(input.toString().getBytes());
+            postConnection.connect();
+            os.flush();
+            os.close();
+
+            is = postConnection.getInputStream();
+            responseData = InputStreamToString(is);
+
+            // parse JSON data
+            output = new JSONObject(responseData);
+
+            String status = output.getString("state");
+
+            if (status.equals("error")) {
+                JSONObject errors = output.getJSONObject("error");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            InputStream es = postConnection.getErrorStream();
+            try {
+                if (es != null) {
+                    String errorData = InputStreamToString(es);
+                    output = new JSONObject(errorData);
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            } finally {
+                if (es != null) {
+                    try {
+                        es.close();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
         } catch (JSONException e) {
             e.printStackTrace();
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
-        return captureMode;
+
+        return output;
     }
 
     private JSONObject getOptionsJSON(String optionName) {

@@ -21,6 +21,8 @@ import android.os.AsyncTask;
 import com.theta360.automaticfaceblur.network.HttpConnector;
 import com.theta360.automaticfaceblur.network.model.values.Errors;
 
+import org.json.JSONObject;
+
 public class SetCaptureModeTask extends AsyncTask<Void, Void, String> {
     private static final String STREAMING = "streaming";
     private static final String VIDEO = "video";
@@ -29,13 +31,19 @@ public class SetCaptureModeTask extends AsyncTask<Void, Void, String> {
     private HttpConnector mCamera;
     private String mCaptureMode;
     private int mExposureDelay;
+    private JSONObject mJsonRecord;
     private boolean mIsStart;
+    private boolean mIsChange;
+    private boolean mIsEnded;
 
-    public SetCaptureModeTask(Callback callback, String captureMode, int exposureDelay, boolean isStart) {
+    public SetCaptureModeTask(Callback callback, String captureMode, int exposureDelay, JSONObject jsonRecord, boolean isStart, boolean isChange, boolean isEnded) {
         this.mCallback = callback;
         this.mCaptureMode = captureMode;
         this.mExposureDelay = exposureDelay;
+        this.mJsonRecord = jsonRecord;
         this.mIsStart = isStart;
+        this.mIsChange = isChange;
+        this.mIsEnded = isEnded;
     }
 
 
@@ -59,7 +67,7 @@ public class SetCaptureModeTask extends AsyncTask<Void, Void, String> {
         if (mCaptureMode.equals(STREAMING)) {
             mCaptureMode = VIDEO;
         }
-        String errorMessage = mCamera.setCaptureMode(mCaptureMode);
+        String errorMessage = mCamera.setCaptureMode(mCaptureMode, mJsonRecord, mIsEnded, mIsChange);
         if (errorMessage != null) {
             mCallback.onSetCaptureModeFailed(Errors.UNEXPECTED);
         }
